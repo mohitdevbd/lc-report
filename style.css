@@ -483,9 +483,15 @@ tbody tr:last-child td{
     letter-spacing:0;
 }
 
-.app-credit strong{
+.app-credit a{
     color:#10234a;
     font-weight:800;
+    text-decoration:none;
+}
+
+.app-credit a:hover{
+    color:var(--primary);
+    text-decoration:underline;
 }
 
 @media(max-width:1100px){
