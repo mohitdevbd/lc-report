@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC Statement Generator Pro</title>
+
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header class="app-header">
+        <div>
+            <h1>LC Statement Generator Pro</h1>
+            <p class="subtitle">Sales Dashboard</p>
+        </div>
+        <div class="date-chip">
+            <i data-lucide="calendar-days"></i>
+            <span id="todayLabel">Today</span>
+            <i data-lucide="chevron-down"></i>
+        </div>
+    </header>
+
+    <section class="control-panel">
+
+        <div class="topbar">
+
+            <label class="upload-card" for="excelFile">
+                <input
+                    type="file"
+                    id="excelFile"
+                    accept=".xlsx,.xls">
+                <span class="upload-icon">
+                    <i data-lucide="file-spreadsheet"></i>
+                </span>
+                <span class="upload-text">
+                    <strong id="uploadFileName">Upload LC Register</strong>
+                    <small id="uploadStatus">No file selected</small>
+                </span>
+                <span class="upload-check">
+                    <i data-lucide="check"></i>
+                </span>
+            </label>
+
+            <select id="sheetSelector" class="sheet-select">
+                <option value="">Select Sheet</option>
+            </select>
+
+            <button id="generateBtn" class="primary-btn">
+                <i data-lucide="bar-chart-3"></i>
+                Generate Report
+            </button>
+
+            <button id="exportExcelBtn" class="export-btn excel-btn">
+                <i data-lucide="file-spreadsheet"></i>
+                Export to Excel
+            </button>
+
+            <button id="exportPdfBtn" class="export-btn pdf-btn">
+                <i data-lucide="file-text"></i>
+                Export to PDF
+            </button>
+
+        </div>
+
+        <div class="filters">
+
+            <div class="filter-box">
+                <label>Filter Type</label>
+
+                <select id="filterType">
+                    <option value="all">All Data</option>
+                    <option value="month">Monthly Total</option>
+                    <option value="range">Date Range Total</option>
+                </select>
+            </div>
+
+            <div class="filter-box" id="monthBox" style="display:none;">
+                <label>Month</label>
+                <input type="month" id="monthFilter">
+            </div>
+
+            <div class="filter-box" id="fromBox" style="display:none;">
+                <label>From Date</label>
+                <input type="date" id="fromDate">
+            </div>
+
+            <div class="filter-box" id="toBox" style="display:none;">
+                <label>To Date</label>
+                <input type="date" id="toDate">
+            </div>
+
+            <button id="toggleCompanies" class="exclude-btn" aria-expanded="false">
+                <i data-lucide="list-filter"></i>
+                Show Exclude Companies
+            </button>
+
+        </div>
+
+    </section>
+
+
+<div id="companyWrapper" class="company-panel">
+
+    <h3>Exclude Companies</h3>
+
+    <div id="companyList"></div>
+
+</div>
+
+    <div class="summary">
+
+        <div class="card">
+            <span class="card-icon total-icon">
+                <i data-lucide="dollar-sign"></i>
+            </span>
+            <div>
+                <h3>Grand Total</h3>
+                <p id="grandTotal">$0.00</p>
+                <small>Total LC Value</small>
+            </div>
+        </div>
+
+        <div class="card">
+            <span class="card-icon performer-icon">
+                <i data-lucide="star"></i>
+            </span>
+            <div>
+                <h3>Top Performer</h3>
+                <p id="topPerformer">-</p>
+                <small>Total LC Value</small>
+            </div>
+        </div>
+
+        <div class="card">
+            <span class="card-icon count-icon">
+                <i data-lucide="users"></i>
+            </span>
+            <div>
+                <h3>Total LC Count</h3>
+                <p id="totalLC">0</p>
+                <small>Total LC Entries</small>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="table-wrap">
+        <table id="reportTable">
+
+            <thead>
+                <tr>
+                    <th>Marketing Person</th>
+                    <th>Total LC Value</th>
+                </tr>
+            </thead>
+
+            <tbody></tbody>
+
+        </table>
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
