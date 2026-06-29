@@ -317,6 +317,18 @@ function getDateFilteredRows(columns, filterDetails) {
     return filteredRows;
 }
 
+function hasRequiredReportFields(row, columns) {
+
+    const company = String(row[columns.company] || "").trim();
+    const marketingPerson = String(row[columns.marketingPerson] || "").trim();
+
+    return (
+        company.length > 0 &&
+        marketingPerson.length > 0
+    );
+
+}
+
 function splitIncludedAndExcludedRows(rows, columns) {
     const excludedCompanies = getExcludedCompanies();
 
@@ -481,8 +493,10 @@ function generateReport() {
     }
 
     const dateFilteredRows = getDateFilteredRows(columns, filterDetails);
+    const reportRows =
+    dateFilteredRows.filter(row => hasRequiredReportFields(row, columns));
     const rowGroups =
-    splitIncludedAndExcludedRows(dateFilteredRows, columns);
+    splitIncludedAndExcludedRows(reportRows, columns);
     const aggregated = aggregateRows(rowGroups.includedRows, columns);
     const excludedAggregated =
     aggregateExcludedCompanies(rowGroups.excludedRows, columns);
@@ -495,7 +509,14 @@ function generateReport() {
     reportState.excludedTotal = excludedAggregated.total;
     reportState.grandTotal = aggregated.grandTotal;
     reportState.topPerformer = aggregated.topPerformer;
-    reportState.totalLC = rowGroups.includedRows.length;
+    reportState.totalLC = rowGroups.includedRows.filter(row => {
+
+    const company = String(row[columns.company] || "").trim();
+    const marketing = String(row[columns.marketingPerson] || "").trim();
+
+    return company.length > 0 && marketing.length > 0;
+
+}).length;
 
     renderReport();
 
