@@ -1,5 +1,6 @@
 let workbook;
 let data = [];
+let salesChartInstance = null;
 
 const reportState = {
     sheetName:"",
@@ -8,8 +9,12 @@ const reportState = {
     excludedCompanyRows:[],
     excludedTotal:0,
     grandTotal:0,
+    avgMonthlySales:0,
     topPerformer:"-",
-    totalLC:0
+    topPerformerValue:0,
+    totalLC:0,
+    excludeNzTopPerformer:"-",
+    excludeNzTopPerformerValue:0
 };
 
 const elements = {
@@ -33,8 +38,13 @@ const elements = {
     companyWrapper:document.getElementById("companyWrapper"),
     companyList:document.getElementById("companyList"),
     grandTotal:document.getElementById("grandTotal"),
+    avgMonthlySales:document.getElementById("avgMonthlySales"),
     topPerformer:document.getElementById("topPerformer"),
+    topPerformerAmount:document.getElementById("topPerformerAmount"),
     totalLC:document.getElementById("totalLC"),
+    excludedCompanyTotal:document.getElementById("excludedCompanyTotal"),
+    excludeNzTopPerformer:document.getElementById("excludeNzTopPerformer"),
+    excludeNzTopPerformerAmount:document.getElementById("excludeNzTopPerformerAmount"),
     tableBody:document.querySelector("#reportTable tbody")
 };
 
@@ -379,9 +389,8 @@ function aggregateRows(filteredRows, columns) {
     return {
         rows,
         grandTotal,
-        topPerformer:rows.length
-        ? rows[0].name + " (" + formatMoney(rows[0].value) + ")"
-        : "-"
+        topPerformerName:rows.length ? rows[0].name : "-",
+        topPerformerValue:rows.length ? rows[0].value : 0
     };
 }
 
@@ -464,8 +473,13 @@ function renderReport() {
     }
 
     elements.grandTotal.textContent = formatMoney(reportState.grandTotal);
+    elements.avgMonthlySales.textContent = formatMoney(reportState.avgMonthlySales);
     elements.topPerformer.textContent = reportState.topPerformer;
+    elements.topPerformerAmount.textContent = reportState.topPerformerValue > 0 ? formatMoney(reportState.topPerformerValue) : "$0.00";
     elements.totalLC.textContent = reportState.totalLC;
+    elements.excludedCompanyTotal.textContent = formatMoney(reportState.excludedTotal);
+    elements.excludeNzTopPerformer.textContent = reportState.excludeNzTopPerformer;
+    elements.excludeNzTopPerformerAmount.textContent = reportState.excludeNzTopPerformerValue > 0 ? formatMoney(reportState.excludeNzTopPerformerValue) : "$0.00";
 }
 
 function resetReport() {
@@ -473,8 +487,12 @@ function resetReport() {
     reportState.excludedCompanyRows = [];
     reportState.excludedTotal = 0;
     reportState.grandTotal = 0;
+    reportState.avgMonthlySales = 0;
     reportState.topPerformer = "-";
+    reportState.topPerformerValue = 0;
     reportState.totalLC = 0;
+    reportState.excludeNzTopPerformer = "-";
+    reportState.excludeNzTopPerformerValue = 0;
     reportState.filterLabel = "All Data";
     renderReport();
 }
@@ -501,6 +519,52 @@ function generateReport() {
     const excludedAggregated =
     aggregateExcludedCompanies(rowGroups.excludedRows, columns);
 
+    // Calculate AVG Monthly Sales
+    let activeMonthCount = 1;
+    if (filterDetails.type === "month") {
+        activeMonthCount = 1;
+    } else if (filterDetails.type === "range" && elements.fromDate.value && elements.toDate.value) {
+        const start = new Date(elements.fromDate.value);
+        const end = new Date(elements.toDate.value);
+        const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+        activeMonthCount = Math.max(1, diffMonths);
+    } else {
+        const monthsInDataset = new Set();
+        rowGroups.includedRows.forEach(row => {
+            const date = parseLCDate(row[columns.lcDate]);
+            if (date) {
+                const monthStr = date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
+                monthsInDataset.add(monthStr);
+            }
+        });
+        activeMonthCount = monthsInDataset.size || 1;
+    }
+    reportState.avgMonthlySales = aggregated.grandTotal / activeMonthCount;
+
+    // Calculate Exclude NZ Denim & NZ Fabric Top Performer
+    const nzExcludedTotals = {};
+    rowGroups.includedRows.forEach(row => {
+        const companyName = String(row[columns.company] || "").toUpperCase();
+        if (companyName.includes("NZ DENIM") || companyName.includes("NZ FABRIC")) {
+            return; // skip these companies
+        }
+        const marketingPerson = String(row[columns.marketingPerson] || "").trim();
+        if (!marketingPerson) return;
+        const value = parseAmount(row[columns.totalValue]);
+        nzExcludedTotals[marketingPerson] = (nzExcludedTotals[marketingPerson] || 0) + value;
+    });
+
+    const nzExcludedSorted = Object.entries(nzExcludedTotals).sort((a, b) => b[1] - a[1]);
+    if (nzExcludedSorted.length > 0) {
+        const topName = nzExcludedSorted[0][0];
+        const topValue = nzExcludedSorted[0][1];
+        reportState.excludeNzTopPerformer = topName;
+        reportState.excludeNzTopPerformerValue = topValue;
+    } else {
+        reportState.excludeNzTopPerformer = "-";
+        reportState.excludeNzTopPerformerValue = 0;
+    }
+
     reportState.sheetName = getSelectedSheetName();
     reportState.filterLabel = filterDetails.label;
     reportState.filterDetail = filterDetails.detail;
@@ -508,21 +572,124 @@ function generateReport() {
     reportState.excludedCompanyRows = excludedAggregated.rows;
     reportState.excludedTotal = excludedAggregated.total;
     reportState.grandTotal = aggregated.grandTotal;
-    reportState.topPerformer = aggregated.topPerformer;
+    reportState.topPerformer = aggregated.topPerformerName;
+    reportState.topPerformerValue = aggregated.topPerformerValue;
     reportState.totalLC = rowGroups.includedRows.filter(row => {
-
-    const company = String(row[columns.company] || "").trim();
-    const marketing = String(row[columns.marketingPerson] || "").trim();
-
-    return company.length > 0 && marketing.length > 0;
-
-}).length;
+        const company = String(row[columns.company] || "").trim();
+        const marketing = String(row[columns.marketingPerson] || "").trim();
+        return company.length > 0 && marketing.length > 0;
+    }).length;
 
     renderReport();
+    updateSalesChart(rowGroups.includedRows, columns);
 
     console.log("Using value column:", columns.totalValue);
 
     return true;
+}
+
+function updateSalesChart(rows, columns) {
+    const canvas = document.getElementById('monthlySalesChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Determine the year from data
+    let year = 2026;
+    for (const row of rows) {
+        const date = parseLCDate(row[columns.lcDate]);
+        if (date) {
+            year = date.getFullYear();
+            break;
+        }
+    }
+    const shortYear = String(year).substring(2);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const labels = monthNames.map(m => m + "-" + shortYear);
+    
+    const monthlySums = Array(12).fill(0);
+    rows.forEach(row => {
+        const date = parseLCDate(row[columns.lcDate]);
+        if (date) {
+            const m = date.getMonth();
+            if (m >= 0 && m < 12) {
+                monthlySums[m] += parseAmount(row[columns.totalValue]);
+            }
+        }
+    });
+
+    if (salesChartInstance) {
+        salesChartInstance.destroy();
+    }
+
+    salesChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total LC Value ($)',
+                data: monthlySums,
+                backgroundColor: '#797e53',
+                hoverBackgroundColor: '#636842',
+                borderRadius: 4,
+                borderWidth: 0,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Value: $' + context.raw.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        font: {
+                            family: 'Plus Jakarta Sans',
+                            size: 11,
+                            weight: '500'
+                        }
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.04)'
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        font: {
+                            family: 'Plus Jakarta Sans',
+                            size: 11
+                        },
+                        callback: function(value) {
+                            if (value >= 1e6) {
+                                return '$' + (value / 1e6).toFixed(1) + 'M';
+                            } else if (value >= 1e3) {
+                                return '$' + (value / 1e3).toFixed(0) + 'k';
+                            }
+                            return '$' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function loadCompanies() {
@@ -545,6 +712,7 @@ function loadCompanies() {
 
         input.type = "checkbox";
         input.value = company;
+        input.addEventListener("change", generateReport);
 
         label.appendChild(input);
         label.appendChild(document.createTextNode(" " + company));
@@ -569,7 +737,7 @@ function loadSheet(sheetName) {
 
     reportState.sheetName = sheetName;
     loadCompanies();
-    resetReport();
+    generateReport();
 }
 
 function handleExcelUpload(event) {
@@ -766,10 +934,44 @@ elements.sheetSelector.addEventListener("change", event => loadSheet(event.targe
 elements.generateBtn.addEventListener("click", generateReport);
 elements.exportExcelBtn.addEventListener("click", exportToExcel);
 elements.exportPdfBtn.addEventListener("click", exportToPdf);
-elements.filterType.addEventListener("change", updateFilterVisibility);
+elements.filterType.addEventListener("change", () => {
+    updateFilterVisibility();
+    generateReport();
+});
+elements.monthFilter.addEventListener("change", generateReport);
+elements.fromDate.addEventListener("change", generateReport);
+elements.toDate.addEventListener("change", generateReport);
 elements.toggleCompanies.addEventListener("click", toggleCompanies);
 
 elements.todayLabel.textContent = formatDisplayDate();
 updateFilterVisibility();
 resetReport();
 refreshIcons();
+
+function preloadDefaultExcel() {
+    fetch('LC Register 2026.xlsx')
+        .then(res => {
+            if (!res.ok) throw new Error('Default file not found');
+            return res.arrayBuffer();
+        })
+        .then(ab => {
+            workbook = XLSX.read(ab, { type: 'array' });
+            elements.sheetSelector.innerHTML = "";
+            workbook.SheetNames.forEach(sheet => {
+                const option = document.createElement("option");
+                option.value = sheet;
+                option.textContent = sheet;
+                elements.sheetSelector.appendChild(option);
+            });
+            elements.uploadFileName.textContent = "LC Register 2026.xlsx";
+            elements.uploadStatus.textContent = "Auto-loaded";
+            elements.uploadCard.classList.add("uploaded");
+            loadSheet(workbook.SheetNames[0]);
+            generateReport();
+        })
+        .catch(err => {
+            console.log('Auto-preload status:', err.message);
+        });
+}
+
+preloadDefaultExcel();

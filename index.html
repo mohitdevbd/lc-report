@@ -6,10 +6,13 @@
 <title>LC Statement Generator Pro</title>
 
 <link rel="stylesheet" href="style.css">
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
@@ -116,41 +119,88 @@
 
 </div>
 
-    <div class="summary">
+    <!-- Dashboard Main Grid (Left stats, Right chart) -->
+    <div class="dashboard-main-grid">
+        <div class="stats-left-col">
+            <!-- Box 1: Total LC Value -->
+            <div class="dashboard-card large-card total-sales-card">
+                <div class="card-header">
+                    <span class="card-title">Total LC Value</span>
+                    <span class="card-icon-badge">
+                        <i data-lucide="dollar-sign"></i>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="card-value" id="grandTotal">$0.00</p>
+                    <span class="card-trend-up">
+                        <i data-lucide="trending-up"></i>
+                        <span>Compared to 2025</span>
+                    </span>
+                </div>
+            </div>
 
-        <div class="card">
-            <span class="card-icon total-icon">
-                <i data-lucide="dollar-sign"></i>
-            </span>
-            <div>
-                <h3>Grand Total</h3>
-                <p id="grandTotal">$0.00</p>
-                <small>Total LC Value</small>
+            <!-- Box 2: Top Performer -->
+            <div class="dashboard-card large-card avg-sales-card">
+                <div class="card-header">
+                    <span class="card-title">Top Performer</span>
+                    <span class="card-icon-badge">
+                        <i data-lucide="award"></i>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="card-value" id="topPerformer">-</p>
+                    <span class="card-amount-label" id="topPerformerAmount">$0.00</span>
+                </div>
             </div>
         </div>
 
-        <div class="card">
-            <span class="card-icon performer-icon">
-                <i data-lucide="star"></i>
-            </span>
-            <div>
-                <h3>Top Performer</h3>
-                <p id="topPerformer">-</p>
-                <small>Total LC Value</small>
+        <!-- Box 7: Monthly Sales Chart -->
+        <div class="dashboard-card chart-card">
+            <div class="card-header">
+                <span class="card-title">Monthly Sales Chart</span>
+                <span class="chart-legend">LC Value per Month</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="monthlySalesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Bottom Grid (4 smaller stats cards) -->
+    <div class="dashboard-bottom-grid">
+        <!-- Box 3: AVG Monthly Sales -->
+        <div class="dashboard-card mini-card q1-color">
+            <div class="mini-card-label">AVG Monthly Sales</div>
+            <div class="mini-card-value" id="avgMonthlySales">$0.00</div>
+            <div class="mini-card-footer">
+                <i data-lucide="percent"></i> Average Monthly Sales
             </div>
         </div>
 
-        <div class="card">
-            <span class="card-icon count-icon">
-                <i data-lucide="users"></i>
-            </span>
-            <div>
-                <h3>Total LC Count</h3>
-                <p id="totalLC">0</p>
-                <small>Total LC Entries</small>
+        <!-- Box 4: Total LC -->
+        <div class="dashboard-card mini-card q2-color">
+            <div class="mini-card-label">Total LC</div>
+            <div class="mini-card-value" id="totalLC">0</div>
+            <div class="mini-card-footer">
+                <i data-lucide="file-text"></i> Total LC Entries
             </div>
         </div>
 
+        <!-- Box 5: Excluded Company Total -->
+        <div class="dashboard-card mini-card q3-color">
+            <div class="mini-card-label">Excluded Company Total</div>
+            <div class="mini-card-value" id="excludedCompanyTotal">$0.00</div>
+            <div class="mini-card-footer">
+                <i data-lucide="eye-off"></i> Selected Excluded Companies
+            </div>
+        </div>
+
+        <!-- Box 6: Exclude NZ Denim & NZ Fabric Top Performer -->
+        <div class="dashboard-card mini-card q4-color">
+            <div class="mini-card-label">Excluding NZ Denim & Fabric Top Performer</div>
+            <div class="mini-card-value" id="excludeNzTopPerformer">-</div>
+            <div class="mini-card-amount" id="excludeNzTopPerformerAmount">$0.00</div>
+        </div>
     </div>
 
     <div class="table-wrap">

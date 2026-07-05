@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "dev": "npx -y serve ."
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
