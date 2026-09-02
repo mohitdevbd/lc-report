@@ -424,19 +424,75 @@ function getSelectedSheetName() {
 
 function getShareUrl(sheetName = getSelectedSheetName()) {
     const url = new URL(window.location.href);
-    const cleanUrl = new URL(url.origin + url.pathname);
 
-    cleanUrl.searchParams.set("share", "1");
+    url.searchParams.set("share", "1");
+    url.searchParams.delete("sheet");
+    url.searchParams.delete("cards");
+    url.hash = "";
+
     if (sheetName) {
-        cleanUrl.searchParams.set("sheet", sheetName);
+        url.searchParams.set("sheet", sheetName);
     }
 
     if (hiddenCards.length) {
-        cleanUrl.searchParams.set("cards", hiddenCards.join(","));
+        url.searchParams.set("cards", hiddenCards.join(","));
     }
 
-    cleanUrl.hash = "";
-    return cleanUrl.toString();
+    if (workbook) {
+        const snapshot = buildShareSnapshot();
+
+        if (snapshot) {
+            url.hash = snapshotPrefix + encodeSharePayload(snapshot);
+        }
+    }
+    else if (shareSnapshot) {
+        url.hash = snapshotPrefix + encodeSharePayload(shareSnapshot);
+    }
+
+    return url.toString();
+}
+
+async function shortenUrl(longUrl) {
+    if (!longUrl || longUrl.length < 80) return longUrl;
+
+    // 1. Try CleanURI
+    try {
+        const res = await fetch("https://cleanuri.com/api/v1/shorten", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: "url=" + encodeURIComponent(longUrl)
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.result_url) return data.result_url;
+        }
+    } catch (e) {
+        console.warn("CleanURI attempt failed:", e);
+    }
+
+    // 2. Try clck.ru
+    try {
+        const res = await fetch("https://clck.ru/--?url=" + encodeURIComponent(longUrl));
+        if (res.ok) {
+            const text = await res.text();
+            if (text && text.startsWith("http")) return text.trim();
+        }
+    } catch (e) {
+        console.warn("clck.ru attempt failed:", e);
+    }
+
+    // 3. Try TinyURL
+    try {
+        const res = await fetch("https://tinyurl.com/api-create.php?url=" + encodeURIComponent(longUrl));
+        if (res.ok) {
+            const text = await res.text();
+            if (text && text.startsWith("http")) return text.trim();
+        }
+    } catch (e) {
+        console.warn("TinyURL attempt failed:", e);
+    }
+
+    return longUrl;
 }
 
 function setCopyButtonState(message, icon = "check") {
@@ -476,20 +532,23 @@ function copyToClipboard(text) {
     });
 }
 
-function copyShareLink() {
+async function copyShareLink() {
     try {
-        const shareUrl = getShareUrl();
+        setCopyButtonState("Generating...", "share-2");
+        const fullShareUrl = getShareUrl();
 
-        copyToClipboard(shareUrl)
-            .then(() => {
-                setCopyButtonState("Link Copied!", "check");
-                setTimeout(() => {
-                    setCopyButtonState("Copy Share Link", "share-2");
-                }, 2000);
-            })
-            .catch(() => {
-                window.prompt("Copy this share link:", shareUrl);
-            });
+        let finalUrl = fullShareUrl;
+        try {
+            finalUrl = await shortenUrl(fullShareUrl);
+        } catch (err) {
+            console.warn("Shortener error:", err);
+        }
+
+        await copyToClipboard(finalUrl);
+        setCopyButtonState("Link Copied!", "check");
+        setTimeout(() => {
+            setCopyButtonState("Copy Share Link", "share-2");
+        }, 2000);
     } catch (error) {
         console.error("Error generating share URL:", error);
         window.prompt("Copy this share link:", window.location.href);
