@@ -525,9 +525,10 @@ function updateShareUrl(sheetName) {
 }
 
 function initShareTabs() {
-    if (!workbook || !elements.shareTabs || !elements.sharePanel) return;
+    if (!elements.shareTabs || !elements.sharePanel) return;
 
-    shareSheetNames = workbook.SheetNames.slice(0, 3);
+    const sheetNames = (workbook && workbook.SheetNames) || window.DEFAULT_SHEET_NAMES || [];
+    shareSheetNames = sheetNames.slice(0, 3);
     elements.shareTabs.innerHTML = "";
 
     shareSheetNames.forEach((sheetName, index) => {
@@ -1291,18 +1292,23 @@ function loadCompanies() {
 }
 
 function loadSheet(sheetName) {
-    if (!workbook || !sheetName) return;
+    if (!sheetName) return;
 
-    const sheet = workbook.Sheets[sheetName];
-
-    data =
-    XLSX.utils.sheet_to_json(
-        sheet,
-        {
-            raw:true,
-            defval:""
-        }
-    );
+    if (workbook && workbook.Sheets && workbook.Sheets[sheetName]) {
+        const sheet = workbook.Sheets[sheetName];
+        data =
+        XLSX.utils.sheet_to_json(
+            sheet,
+            {
+                raw:true,
+                defval:""
+            }
+        );
+    } else if (window.DEFAULT_EXCEL_SHEETS && window.DEFAULT_EXCEL_SHEETS[sheetName]) {
+        data = window.DEFAULT_EXCEL_SHEETS[sheetName];
+    } else {
+        return;
+    }
 
     reportState.sheetName = sheetName;
     if (elements.sheetSelector) {
@@ -1317,7 +1323,8 @@ function populateSheetSelector() {
     if (!elements.sheetSelector) return;
     elements.sheetSelector.innerHTML = "";
 
-    workbook.SheetNames.forEach(sheet => {
+    const sheetNames = (workbook && workbook.SheetNames) || window.DEFAULT_SHEET_NAMES || [];
+    sheetNames.forEach(sheet => {
         const option = document.createElement("option");
 
         option.value = sheet;
@@ -1328,12 +1335,13 @@ function populateSheetSelector() {
 
 function getInitialSheetName() {
     const requestedSheet = urlParams.get("sheet");
+    const sheetNames = (workbook && workbook.SheetNames) || window.DEFAULT_SHEET_NAMES || ["NZTL", "NZAL", "NZDY"];
 
-    if (requestedSheet && workbook.SheetNames.includes(requestedSheet)) {
+    if (requestedSheet && sheetNames.includes(requestedSheet)) {
         return requestedSheet;
     }
 
-    return workbook.SheetNames[0];
+    return sheetNames[0];
 }
 
 function handleExcelUpload(event) {
@@ -1554,43 +1562,14 @@ resetReport();
 refreshIcons();
 shareSnapshot = getSnapshotFromUrl();
 
-function preloadDefaultExcel() {
-    const filePaths = [
-        './LC%20Register%202026.xlsx',
-        './LC Register 2026.xlsx',
-        'LC%20Register%202026.xlsx',
-        'LC Register 2026.xlsx'
-    ];
-
-    function tryFetch(index) {
-        if (index >= filePaths.length) {
-            console.warn('Auto-preload: Default Excel file not found or not accessible.');
-            return;
-        }
-
-        fetch(filePaths[index])
-            .then(res => {
-                if (!res.ok) throw new Error('Status: ' + res.status);
-                return res.arrayBuffer();
-            })
-            .then(ab => {
-                workbook = XLSX.read(ab, { type: 'array' });
-                populateSheetSelector();
-                elements.uploadFileName.textContent = "LC Register 2026.xlsx";
-                elements.uploadStatus.textContent = "Auto-loaded";
-                elements.uploadCard.classList.add("uploaded");
-                initShareTabs();
-                const initialSheet = getInitialSheetName();
-                loadSheet(initialSheet);
-            })
-            .catch(() => {
-                tryFetch(index + 1);
-            });
-    }
-
-    tryFetch(0);
-}
-
-if (!shareSnapshot || !initSnapshotTabs(shareSnapshot)) {
-    preloadDefaultExcel();
+if (shareSnapshot && initSnapshotTabs(shareSnapshot)) {
+    // Loaded from snapshot hash if present
+} else {
+    // Load default dataset instantly from embedded defaultData
+    elements.uploadFileName.textContent = "LC Register 2026.xlsx";
+    elements.uploadStatus.textContent = "Loaded";
+    elements.uploadCard.classList.add("uploaded");
+    initShareTabs();
+    const initialSheet = getInitialSheetName();
+    loadSheet(initialSheet);
 }
