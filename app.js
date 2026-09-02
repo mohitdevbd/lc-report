@@ -435,7 +435,19 @@ function getShareUrl(sheetName = getSelectedSheetName()) {
         cleanUrl.searchParams.set("cards", hiddenCards.join(","));
     }
 
-    cleanUrl.hash = "";
+    // If a custom file was uploaded, embed its data in the URL hash so
+    // recipients can see the uploaded file's report, not the default one.
+    if (isCustomUpload && workbook) {
+        const snapshot = buildShareSnapshot();
+        if (snapshot) {
+            cleanUrl.hash = snapshotPrefix + encodeSharePayload(snapshot);
+        } else {
+            cleanUrl.hash = "";
+        }
+    } else {
+        cleanUrl.hash = "";
+    }
+
     return cleanUrl.toString();
 }
 
