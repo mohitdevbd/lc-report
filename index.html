@@ -22,7 +22,7 @@
 
     <header class="app-header">
         <div>
-            <h1>LC Statement Generator Pro</h1>
+            <h1>LC Statement</h1>
             <p class="subtitle">Sales Dashboard</p>
         </div>
         <div class="date-chip">
@@ -53,52 +53,47 @@
                 </span>
             </label>
 
-            <select id="sheetSelector" class="sheet-select">
-                <option value="">Select Sheet</option>
-            </select>
+            <div class="topbar-actions">
+                <button id="exportExcelBtn" class="export-btn excel-btn">
+                    <i data-lucide="file-spreadsheet"></i>
+                    Export to Excel
+                </button>
 
-            <button id="generateBtn" class="primary-btn">
-                <i data-lucide="bar-chart-3"></i>
-                Generate Report
-            </button>
-
-            <button id="exportExcelBtn" class="export-btn excel-btn">
-                <i data-lucide="file-spreadsheet"></i>
-                Export to Excel
-            </button>
-
-            <button id="exportPdfBtn" class="export-btn pdf-btn">
-                <i data-lucide="file-text"></i>
-                Export to PDF
-            </button>
+                <button id="exportPdfBtn" class="export-btn pdf-btn">
+                    <i data-lucide="file-text"></i>
+                    Export to PDF
+                </button>
+            </div>
 
         </div>
 
         <div class="filters">
 
-            <div class="filter-box">
-                <label>Filter Type</label>
+            <div class="filters-left">
+                <div class="filter-box">
+                    <label>Filter Type</label>
 
-                <select id="filterType">
-                    <option value="all">All Data</option>
-                    <option value="month">Monthly Total</option>
-                    <option value="range">Date Range Total</option>
-                </select>
-            </div>
+                    <select id="filterType">
+                        <option value="all">All Data</option>
+                        <option value="month">Monthly Total</option>
+                        <option value="range">Date Range Total</option>
+                    </select>
+                </div>
 
-            <div class="filter-box" id="monthBox" style="display:none;">
-                <label>Month</label>
-                <input type="month" id="monthFilter">
-            </div>
+                <div class="filter-box" id="monthBox" style="display:none;">
+                    <label>Month</label>
+                    <input type="month" id="monthFilter">
+                </div>
 
-            <div class="filter-box" id="fromBox" style="display:none;">
-                <label>From Date</label>
-                <input type="date" id="fromDate">
-            </div>
+                <div class="filter-box" id="fromBox" style="display:none;">
+                    <label>From Date</label>
+                    <input type="date" id="fromDate">
+                </div>
 
-            <div class="filter-box" id="toBox" style="display:none;">
-                <label>To Date</label>
-                <input type="date" id="toDate">
+                <div class="filter-box" id="toBox" style="display:none;">
+                    <label>To Date</label>
+                    <input type="date" id="toDate">
+                </div>
             </div>
 
             <button id="toggleCompanies" class="exclude-btn" aria-expanded="false">
@@ -119,11 +114,25 @@
 
 </div>
 
+    <section id="sharePanel" class="share-panel" aria-label="Shareable report sheets">
+        <div class="share-heading">
+            <div>
+                <p class="share-kicker">SHAREABLE REPORT</p>
+                <h2 id="shareReportTitle">STATEMENT 2026</h2>
+            </div>
+            <button id="copyShareBtn" class="share-copy-btn" type="button">
+                <i data-lucide="share-2"></i>
+                Copy Share Link
+            </button>
+        </div>
+        <div id="shareTabs" class="share-tabs" role="tablist" aria-label="Report sheets"></div>
+    </section>
+
     <!-- Dashboard Main Grid (Left stats, Right chart) -->
     <div class="dashboard-main-grid">
         <div class="stats-left-col">
             <!-- Box 1: Total LC Value -->
-            <div class="dashboard-card large-card total-sales-card">
+            <div class="dashboard-card large-card total-sales-card" data-card-id="totalValue">
                 <div class="card-header">
                     <span class="card-title">Total LC Value</span>
                     <span class="card-icon-badge">
@@ -140,7 +149,7 @@
             </div>
 
             <!-- Box 2: Top Performer -->
-            <div class="dashboard-card large-card avg-sales-card">
+            <div class="dashboard-card large-card avg-sales-card" data-card-id="topPerformer">
                 <div class="card-header">
                     <span class="card-title">Top Performer</span>
                     <span class="card-icon-badge">
@@ -155,7 +164,7 @@
         </div>
 
         <!-- Box 7: Monthly Sales Chart -->
-        <div class="dashboard-card chart-card">
+        <div class="dashboard-card chart-card" data-card-id="monthlyChart">
             <div class="card-header">
                 <span class="card-title">Monthly Sales Chart</span>
                 <span class="chart-legend">LC Value per Month</span>
@@ -169,7 +178,7 @@
     <!-- Dashboard Bottom Grid (4 smaller stats cards) -->
     <div class="dashboard-bottom-grid">
         <!-- Box 3: AVG Monthly Sales -->
-        <div class="dashboard-card mini-card q1-color">
+        <div class="dashboard-card mini-card q1-color" data-card-id="avgMonthlySales">
             <div class="mini-card-label">AVG Monthly Sales</div>
             <div class="mini-card-value" id="avgMonthlySales">$0.00</div>
             <div class="mini-card-footer">
@@ -178,7 +187,7 @@
         </div>
 
         <!-- Box 4: Total LC -->
-        <div class="dashboard-card mini-card q2-color">
+        <div class="dashboard-card mini-card q2-color" data-card-id="totalLc">
             <div class="mini-card-label">Total LC</div>
             <div class="mini-card-value" id="totalLC">0</div>
             <div class="mini-card-footer">
@@ -187,7 +196,7 @@
         </div>
 
         <!-- Box 5: Excluded Company Total -->
-        <div class="dashboard-card mini-card q3-color">
+        <div class="dashboard-card mini-card q3-color" data-card-id="excludedCompanyTotal">
             <div class="mini-card-label">Excluded Company Total</div>
             <div class="mini-card-value" id="excludedCompanyTotal">$0.00</div>
             <div class="mini-card-footer">
@@ -196,7 +205,7 @@
         </div>
 
         <!-- Box 6: Exclude NZ Denim & NZ Fabric Top Performer -->
-        <div class="dashboard-card mini-card q4-color">
+        <div class="dashboard-card mini-card q4-color" data-card-id="excludeNzTopPerformer">
             <div class="mini-card-label">Excluding NZ Denim & Fabric Top Performer</div>
             <div class="mini-card-value" id="excludeNzTopPerformer">-</div>
             <div class="mini-card-amount" id="excludeNzTopPerformerAmount">$0.00</div>
