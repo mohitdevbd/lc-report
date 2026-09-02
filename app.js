@@ -488,23 +488,48 @@ function copyToClipboard(text) {
     });
 }
 
-function copyShareLink() {
+async function copyShareLink() {
     try {
         const shareUrl = getShareUrl();
+        setCopyButtonState("Shortening...", "loader");
 
-        copyToClipboard(shareUrl)
-            .then(() => {
-                setCopyButtonState("Link Copied!", "check");
-                setTimeout(() => {
-                    setCopyButtonState("Copy Share Link", "share-2");
-                }, 2000);
-            })
-            .catch(() => {
-                window.prompt("Copy this share link:", shareUrl);
-            });
+        // Only shorten default links (no snapshot hash) — custom upload URLs
+        // contain encoded data in the hash and must stay as-is.
+        if (!isCustomUpload) {
+            try {
+                const apiUrl =
+                    "https://is.gd/create.php?format=simple&url=" +
+                    encodeURIComponent(shareUrl);
+                const response = await fetch(apiUrl);
+
+                if (response.ok) {
+                    const shortUrl = (await response.text()).trim();
+
+                    if (shortUrl && shortUrl.startsWith("http")) {
+                        await copyToClipboard(shortUrl);
+                        setCopyButtonState("Link Copied!", "check");
+                        setTimeout(() => {
+                            setCopyButtonState("Copy Share Link", "share-2");
+                        }, 2000);
+                        return;
+                    }
+                }
+            } catch (shortenError) {
+                console.warn("URL shortening failed, using full URL:", shortenError);
+            }
+        }
+
+        // Fallback: copy full URL (always used for custom uploads)
+        await copyToClipboard(shareUrl);
+        setCopyButtonState("Link Copied!", "check");
+        setTimeout(() => {
+            setCopyButtonState("Copy Share Link", "share-2");
+        }, 2000);
+
     } catch (error) {
         console.error("Error generating share URL:", error);
         window.prompt("Copy this share link:", window.location.href);
+        setCopyButtonState("Copy Share Link", "share-2");
     }
 }
 
