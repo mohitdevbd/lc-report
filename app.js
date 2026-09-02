@@ -424,32 +424,19 @@ function getSelectedSheetName() {
 
 function getShareUrl(sheetName = getSelectedSheetName()) {
     const url = new URL(window.location.href);
+    const cleanUrl = new URL(url.origin + url.pathname);
 
-    url.searchParams.set("share", "1");
-    url.searchParams.delete("sheet");
-    url.searchParams.delete("cards");
-    url.hash = "";
-
+    cleanUrl.searchParams.set("share", "1");
     if (sheetName) {
-        url.searchParams.set("sheet", sheetName);
+        cleanUrl.searchParams.set("sheet", sheetName);
     }
 
     if (hiddenCards.length) {
-        url.searchParams.set("cards", hiddenCards.join(","));
+        cleanUrl.searchParams.set("cards", hiddenCards.join(","));
     }
 
-    if (isCustomUpload && workbook) {
-        const snapshot = buildShareSnapshot();
-
-        if (snapshot) {
-            url.hash = snapshotPrefix + encodeSharePayload(snapshot);
-        }
-    }
-    else if (shareSnapshot) {
-        url.hash = snapshotPrefix + encodeSharePayload(shareSnapshot);
-    }
-
-    return url.toString();
+    cleanUrl.hash = "";
+    return cleanUrl.toString();
 }
 
 function setCopyButtonState(message, icon = "check") {
